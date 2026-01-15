@@ -1,0 +1,44 @@
+- name : Update & Install MySQL on both db instances (except proxy)  
+  hosts: 
+    - instance1 
+    - instance2 
+  become: true 
+  roles: 
+    - update
+
+- name: Configure MySQL for Instance 1 
+  hosts: instance1 
+  become: true 
+  roles: 
+    - mysql_configure_first
+
+- name: Configure MySQL for Instance 2
+  hosts: instance2
+  become: true  
+  roles: 
+    - mysql_configure_second 
+
+- name: Configure UFW
+  hosts: all 
+  become: true 
+  roles: 
+    - ufw_configure 
+
+- name: Prepare Replica on Instance 1
+  hosts: instance1
+  become: true 
+  roles: 
+    - prepare_replica_1
+
+- name: Configure Replica from Instance 1 to Instance 2
+  hosts: instance2
+  become: true 
+  roles: 
+    - replica_2 
+
+- name: Configure Replica from Instance 2 to Instance 1 
+  hosts: instance1
+  become: true 
+  roles:
+    - replica_1
+    

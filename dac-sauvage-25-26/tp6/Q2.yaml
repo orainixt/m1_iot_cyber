@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-pod #pod name in the cluster
+  labels:
+    app: postgres
+spec:
+  containers:
+    - name: postgres-container
+      image: postgres:15-alpine      
+      ports:
+        - containerPort: 5432
+      env:
+        - name: POSTGRES_PASSWORD
+          value: "postgres_pw"
+      readinessProbe:
+        exec:
+          command: ["pg_isready", "-U", "postgres"]
+        initialDelaySeconds: 5 
+        periodSeconds: 2
+        failureThreshold: 5

@@ -1,0 +1,25 @@
+- name: Update APT  
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install Docker 
+  apt:
+    name: docker.io
+    state: present
+
+- name: Start Docker
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add current user 
+  user:
+    name: "{{ ansible_facts['user_id' ] }}"
+    groups: docker
+    append: yes
+
+- name: Re-initialize SSH  
+  meta: reset_connection
+      

@@ -1,0 +1,85 @@
+- name: Remove old dump file to force re-creation
+  ansible.builtin.file:
+    path: /tmp/all_databases.sql
+    state: absent
+
+- name: Create databse 
+  community.mysql.mysql_db: 
+    name: repldB
+    state: present 
+    login_user: root 
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+
+- name: Create a limited user for instance 2 
+  community.mysql.mysql_user:
+    name: "user_2"
+    password: "user_2_pw"
+    host: "{{mysql_server_2_ip}}"
+    priv: "user_2.*:SELECT,INSERT,UPDATE,CREATE"
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create replication for user i2 on db1
+  community.mysql.mysql_user:
+    name: "repl_2"
+    password: "repl_2_pw"
+    plugin: mysql_native_password
+    host: "{{ mysql_server_2_ip }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  notify: 
+    - Flush Privileges 
+    - Restart MySQL
+
+- name: Create HAProxy user for the proxy 
+  community.mysql.mysql_user: 
+    name: "haproxy"
+    password: "haproxy_pw" 
+    host: "172.28.100.92"
+    priv: "*.*:ALL"
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  notify: 
+    - Flush Privileges
+    - Restart MySQL
+
+- name: Lock tables for replication snapshot
+  community.mysql.mysql_query:
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query: >
+      FLUSH TABLES WITH READ LOCK;
+
+- name: Show Primary Status 
+  community.mysql.mysql_query:
+    login_user: root
+    login_password: ""
+    login_unix_socket: "{{mysql_socket}}" 
+    query: > 
+      SHOW MASTER STATUS; 
+  register: master_status_primary
+
+- name: Dump database for replication
+  ansible.builtin.shell: >
+    mysqldump --single-transaction --set-gtid-purged=OFF --master-data=2 -u root --socket=/var/run/mysqld/mysqld.sock --all-databases > /tmp/all_databases.sql
+  args:
+    creates: /tmp/all_databases.sql
+
+- name: Fetch dump from Primary (m2) to Ansible Controller
+  ansible.builtin.fetch:
+    src: /tmp/all_databases.sql
+    dest: /tmp/all_databases.sql
+    flat: yes
+
+- name: Unlock tables after replication snapshot
+  community.mysql.mysql_query:
+    query: "UNLOCK TABLES;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  notify: 
+    - Restart MySQL

@@ -1,0 +1,97 @@
+- name: Copy dump from Ansible Controller to Instance 1
+  ansible.builtin.copy:
+    src: /tmp/all_databases.sql
+    dest: /tmp/all_databases.sql
+
+- name: Create database 
+  community.mysql.mysql_db:
+    name: repldB
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: import database dump from Instance 1
+  community.mysql.mysql_db:
+    name: repldB
+    state: import
+    target: /tmp/all_databases.sql
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Stop REPLICA before configuring
+  community.mysql.mysql_query:
+    query: "STOP REPLICA;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  ignore_errors: yes
+
+- name: Configure replication source (Change Master)
+  community.mysql.mysql_query:
+    query: >
+      CHANGE MASTER TO
+      MASTER_HOST= "{{mysql_server_1_ip}}",
+      MASTER_USER='repl_2',
+      MASTER_PASSWORD='repl_2_pw',
+      MASTER_LOG_FILE='{{ hostvars[groups['dbserver'][0]]['master_status_primary'].query_result[0][0]['File'] }}',
+      MASTER_LOG_POS={{ hostvars[groups['dbserver'][0]]['master_status_primary'].query_result[0][0]['Position'] }};
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Start Replica
+  community.mysql.mysql_query:
+    query: "START REPLICA;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: create a replica user for the primary
+  community.mysql.mysql_user:
+    name: "repl_1"
+    password: "repl_1_pw"
+    host: "{{mysql_server_1_ip}}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+    login_user: root
+    login_unix_socket: "{{mysql_socket}}"
+
+- name: lock tables for replication snapshot
+  community.mysql.mysql_query:
+    query: "FLUSH TABLES WITH READ LOCK;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: get master status
+  community.mysql.mysql_query:
+    query: "SHOW MASTER STATUS;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  register: master_status_replica
+
+- name: Fetch [SQL Running & IO Running]
+  community.mysql.mysql_query:
+    login_user: "{{mysql_login_user}}"
+    login_password: ""
+    login_unix_socket: "{{mysql_socket}}" 
+    query: > 
+      SHOW REPLICA STATUS; 
+  register: replica_status
+
+- name: Set facts for replica status
+  set_fact:
+    replica_io_running: "{{ replica_status.query_result[0][0].Replica_IO_Running }}"
+    replica_sql_running: "{{ replica_status.query_result[0][0].Replica_SQL_Running }}"
+
+- name: Debug IO Running
+  debug:
+    var: replica_io_running
+
+- name: Debug SQL Running
+  debug:
+    var: replica_sql_running
+
+- name: unlock tables after replication snapshot
+  community.mysql.mysql_query:
+    query: "UNLOCK TABLES;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock

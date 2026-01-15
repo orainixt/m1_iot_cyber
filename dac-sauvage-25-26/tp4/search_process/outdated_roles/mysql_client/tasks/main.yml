@@ -1,0 +1,67 @@
+- name: APT Update
+  become: true 
+  ansible.builtin.apt: 
+    name: "*" 
+    state: latest
+    cache_valid_time: 86400
+
+- name: Install Python MySQL library
+  become: true
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+  
+
+- name: Install MYSQL 
+  ansible.builtin.apt: 
+    name: mysql-server 
+    state: present 
+    update_cache: yes 
+
+- name: Start MYSQL 
+  ansible.builtin.service: 
+    name: mysql 
+    state: started 
+    enabled: yes
+
+- name: Configure MySQL bind-address to allow remote connections
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^bind-address'
+    line: "bind-address = 0.0.0.0"
+    insertafter: '^\[mysqld\]'
+    backup: yes
+    state: present 
+
+- name: Set server-id for replication
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^server-id'
+    line: "server-id = 2"
+    insertafter: '^\[mysqld\]'
+    backup: yes
+
+- name: Active-Active Collision Prevention
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^auto_increment_increment'
+    line: "auto_increment_increment = 2"
+    insertafter: '^\[mysqld\]'
+    backup: yes
+
+- name: Active-Active Collision Prevention 
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^auto_increment_offset'
+    line: "auto_increment_offset = 2"
+    insertafter: '^\[mysqld\]'
+    backup: yes
+
+- name: Enable binary logging
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^log_bin'
+    line: "log_bin = /var/log/mysql/mysql-bin.log"
+    insertafter: '^\[mysqld\]'
+    backup: yes
+  notify: Restart MySQL

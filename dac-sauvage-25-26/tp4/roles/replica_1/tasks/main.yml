@@ -1,0 +1,49 @@
+
+- name: Stop REPLICA before configuring
+  community.mysql.mysql_query:
+    query: "STOP REPLICA;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  ignore_errors: yes
+
+
+- name: Configure replication source (Change Master)
+  community.mysql.mysql_query:
+    query: >
+      CHANGE MASTER TO
+      MASTER_HOST= "{{mysql_server_2_ip}}",
+      MASTER_USER='repl_1',
+      MASTER_PASSWORD='repl_1_pw',
+      MASTER_LOG_FILE='{{ hostvars[groups['dbclient'][0]]['master_status_replica'].query_result[0][0]['File'] }}',
+      MASTER_LOG_POS={{ hostvars[groups['dbclient'][0]]['master_status_replica'].query_result[0][0]['Position'] }};
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Start Replica
+  community.mysql.mysql_query:
+    query: "START REPLICA;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Fetch [SQL Running & IO Running]
+  community.mysql.mysql_query:
+    login_user: "{{mysql_login_user}}"
+    login_password: ""
+    login_unix_socket: "{{mysql_socket}}" 
+    query: > 
+      SHOW REPLICA STATUS; 
+  register: replica_status
+
+- name: Set facts for replica status
+  set_fact:
+    replica_io_running: "{{ replica_status.query_result[0][0].Replica_IO_Running }}"
+    replica_sql_running: "{{ replica_status.query_result[0][0].Replica_SQL_Running }}"
+
+- name: Debug IO Running
+  debug:
+    var: replica_io_running
+
+- name: Debug SQL Running
+  debug:  
+    var: replica_sql_running
+

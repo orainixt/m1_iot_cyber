@@ -1,0 +1,12 @@
+clouds:
+  openstack:
+    auth:
+      auth_url: "http://cloud.univ-lille.fr:5000/v3/"
+      username: "lucas.sauvage.etu"
+      project_id: "304f4c2b72e141b8b405c36f698519cf"
+      project_name: "lucas.sauvage.etu"
+      user_domain_name: "Default"
+      project_domain_name: "Default"
+      password: "159753Lolipop"
+    region_name: "RegionOne"
+    identity_api_version: 3

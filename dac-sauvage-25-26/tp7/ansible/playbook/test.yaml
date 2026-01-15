@@ -1,0 +1,5 @@
+- name: Debug control init 
+  hosts: control_panel 
+  become: true 
+  roles: 
+    - config_control_panel

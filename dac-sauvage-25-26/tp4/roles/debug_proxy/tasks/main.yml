@@ -1,0 +1,27 @@
+- name: Check HAProxy Port [6033 to not conflict with 3033]
+  ansible.builtin.wait_for: 
+    host: "{{ip_proxy}}"
+    port: 6033
+    state: started 
+  register: port_check 
+  ignore_errors: yes
+
+- name: Debug HAProxy Port Test [Lookup for "failed", "port" and "state"]
+  debug: 
+    var: port_check
+
+- name: Test Hostname [which VM's used to run server]
+  community.mysql.mysql_query: 
+    login_user: "haproxy" 
+    login_password: "haproxy_pw" 
+    login_host : "{{ip_proxy}}"
+    login_port: 6033
+    query: >
+      SELECT @@hostname;
+  register: hostname
+
+- name: Debug @@hostname
+  debug: 
+    var: hostname.query_result
+
+

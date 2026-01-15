@@ -1,0 +1,17 @@
+- name: Nettoyer une éventuelle installation corrompue
+  command: minikube delete
+  ignore_errors: yes
+
+
+- name: Forcer les droits sur le socket Docker (Juste avant le start)
+  become: yes
+  file:
+    path: /var/run/docker.sock
+    mode: '0666'
+- name: Start Minikube
+  command: minikube start --driver=docker  
+  register: start_minikube
+
+- name: Ensure Minikube is started 
+  debug: 
+    var: start_minikube 

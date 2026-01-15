@@ -1,0 +1,21 @@
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 86400
+
+- name: Install Python MySQL library
+  ansible.builtin.apt:
+    name: python3-pymysql
+    state: present
+
+- name: Install MySQL server
+  ansible.builtin.apt:
+    name: mysql-server
+    state: present
+    update_cache: yes
+
+- name: Ensure MySQL is started
+  ansible.builtin.service:
+    name: mysql
+    state: started
+    enabled: yes

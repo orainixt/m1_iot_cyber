@@ -1,0 +1,11 @@
+- name: Install Packages for Instance 1 (i1) 
+  hosts: dbserver 
+  become: true 
+  roles: 
+    - mysql_server
+  
+- name: Configure Replication for i1 
+  hosts: dbserver
+  become: true 
+  roles: 
+    - mysql_primaire_1 

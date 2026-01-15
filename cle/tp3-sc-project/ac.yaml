@@ -1,0 +1,23 @@
+statechart:
+  name: AC
+  description: Air Conditioning
+  
+  root state:
+    name: root
+    initial: Off
+    states:
+      - name: Off
+        transitions:
+          - target: On
+            event: on_off_1
+            action: |
+              r1.ac_on(1)
+              send('display_on', value='on')  
+
+      - name: On
+        transitions:
+          - target: Off
+            event: on_off_1
+            action: |
+              r1.ac_off()
+              send('display_on', value='off')  

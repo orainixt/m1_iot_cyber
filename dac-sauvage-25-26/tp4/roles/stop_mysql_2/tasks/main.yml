@@ -1,0 +1,4 @@
+- name: Stop MySQL on server
+  ansible.builtin.service: 
+    name: mysql 
+    state: stopped  

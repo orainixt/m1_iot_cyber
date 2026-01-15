@@ -1,0 +1,9 @@
+plugin: openstack.cloud.openstack
+expand_hostvars: false
+fail_on_errors: false
+clouds:
+  - openstack
+
+groups:
+  control-panel: "'controle' in inventory_hostname"
+  nodes: "'node' in inventory_hostname"

@@ -1,0 +1,5 @@
+- name: db_client_playbook 
+  hosts: dbclient
+  become: true 
+  roles: 
+    - mysql_client 

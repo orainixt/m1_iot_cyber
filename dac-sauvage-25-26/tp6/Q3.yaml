@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      volumes:
+        - name: init-script-vol
+          hostPath:
+            path: /tmp/netflixdb-postgres.sql # where scp drops file 
+            type: File
+
+      containers:
+        - name: postgres
+          image: postgres:15-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
+          
+          volumeMounts:
+            - name: init-script-vol
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+          
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 20

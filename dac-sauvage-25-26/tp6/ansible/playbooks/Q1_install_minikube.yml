@@ -1,0 +1,19 @@
+- name : Install Minikube & Docker on VM1  
+  hosts: vm1
+  become: true 
+  roles: 
+    - install_docker
+    - install_minikube
+  tasks: 
+    - name: Restart VM to apply permission for docker group 
+      reboot: 
+        reboot_timeout: 300 
+
+- name : Verif Minikube (can't be root so new task) 
+  hosts: vm1
+  become: false   
+  roles: 
+    - verif_minikube
+
+
+

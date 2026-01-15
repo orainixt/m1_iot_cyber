@@ -1,0 +1,158 @@
+/* === Paramètres réglables ===
+   --border-color: couleur du bord
+   --border-radius: arrondi des coins (en px)
+   --border-width: épaisseur du bord
+*/
+
+/* GLOBAL : On met juste la couleur de fond, pas de bordure ici pour éviter l'effet "boîte dans la boîte" */
+QWidget {
+    background-color: #0d1117;
+    color: #c9d1d9;
+}
+
+/* QLabel */
+QLabel {
+    color: #c9d1d9;
+    border: none;
+}
+
+/* QTableWidget */
+QTableWidget {
+    background-color: #161b22;
+    gridline-color: #30363d;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+}
+
+QTableWidget::item:selected {
+    background-color: #30363d;
+    color: #ffffff;
+}
+
+/* QPushButton */
+QPushButton {
+    color: #c9d1d9;
+    background-color: #161b22;
+    border: 1px solid #4b5563;
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+
+QPushButton:hover {
+    background-color: #30363d;
+}
+
+/* QMenuBar & QMenu */
+QMenuBar, QMenu {
+    background-color: #161b22;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+}
+
+QMenu::item:selected {
+    background-color: #505050;
+}
+
+/* QCheckBox */
+QCheckBox {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 3px;
+    padding: 3px;
+}
+
+/* QTreeWidget */
+QTreeWidget {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 3px;
+}
+
+QTreeView::item {
+    color: #c9d1d9;
+    padding: 4px 8px;
+}
+
+QTreeView::item:selected {
+    background-color: #30363d;
+    color: #ffffff;
+}
+
+QTreeView::branch:open, QTreeView::branch:closed {
+    color: #c9d1d9;
+}
+
+/* Checkbox personnalisée */
+#tree-checkbox {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 3px;
+}
+
+/* Titres (ID Spécifique) */
+#primary-title {
+    font-size: 40px;
+    font-weight: bold;
+    color: #58a6ff; /* Petit bleu GitHub pour le titre principal */
+}
+
+/* QTextEdit */
+QTextEdit {
+    background-color: #161b22;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+}
+
+/* QSpinBox */
+QSpinBox {
+    background-color: #161b22;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+
+/* QListWidget */
+QListWidget {
+    background-color: #161b22;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 3px;
+    outline: none;
+}
+
+QListWidget::item {
+    color: #c9d1d9;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+QListWidget::item:selected {
+    background-color: #30363d;
+    color: #ffffff;
+}
+
+QListWidget::item:hover {
+    background-color: #21262d;
+}
+
+/* QLineEdit */
+QLineEdit {
+    background-color: #161b22;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+QLineEdit:focus {
+    border: 1px solid #58a6ff;
+}
+
+#secondary-title {
+	font-size: 22px; 
+}

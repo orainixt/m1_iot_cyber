@@ -1,0 +1,335 @@
+statechart: 
+  name: BothACUnit
+  preamble: |
+    alarmTimer = 0
+  root state: 
+    name: CU_WITH_BOTH_AC
+    initial: AC_UNITS_AND_CU
+
+
+    states: 
+
+      - name: AC_UNITS_AND_CU
+        parallel states: 
+          - name: CU 
+            parallel states: 
+              - name: ALARM_CONTROL 
+                initial : ALARM_OFF
+                states: 
+                  - name: ALARM_OFF
+                    transitions: 
+                      - target: ALARM_ON
+                        event: alarm_triggered
+                        action: |
+                          alarmTimer = 0
+                          
+                  - name: ALARM_ON
+                    transitions: 
+                      - target: ALARM_DANGER
+                        event: tick 
+                        guard: alarmTimer == 5 and (r1.curr_temp >= 40 or r2.curr_temp >= 40)
+                        action: |
+                          send('timeout_5sec')
+
+                      - target: ALARM_ON 
+                        event: tick
+                        guard: alarmTimer < 5 and (r1.curr_temp >= 40 or r2.curr_temp >= 40)
+                        action: |
+                          alarmTimer += 1
+                          print("Carefull, you'll be burning in few seconds")
+
+                      - target: ALARM_DANGER
+                        event: timeout_5sec 
+                        guard: 
+                        action: |
+                          alarmTimer = 0
+                          r1.ac_off()
+                          r2.ac_off()
+                          print("ALARM_DANGER reached, both AC shut down")
+
+                      - target: ALARM_OFF
+                        event: tick
+                        guard: r1.curr_temp < 40 and r2.curr_temp < 40 
+                        action: |
+                          alarmTimer=0 
+                          print("Temp back to normal")
+
+                  - name: ALARM_DANGER
+                    transitions: 
+                      - target: ALARM_OFF
+                        event: tick
+                        guard: r1.curr_temp < 40 and r2.curr_temp < 40 
+                        action: |
+                          alarmTimer=0 
+
+              - name: NIGHT_CONTROL 
+                initial: DAY 
+                states: 
+                  - name: DAY 
+                    transitions: 
+                      - target: NIGHT
+                        event: time_10pm
+                        action: |
+                          send('next_1')
+                          send('next_2')
+                  - name: NIGHT 
+                    transitions: 
+                      - target: DAY 
+                        event: time_7am
+                    
+          - name: AC_UNITS_WRAPPER
+            initial: AC_UNITS
+            states:
+              - name: LastUsedStateManual_AC
+                type: shallow history
+
+              - name: AC_UNITS  
+                parallel states:
+
+                  - name: LIVING_ROOM
+                    initial: OFF_LR
+                    states: 
+                      - name: OFF_LR
+                        transitions: 
+                          - target: ON_LR 
+                            event: on_off_1
+                            action: |
+                              r1.ac_on(0)
+                              desTempLR = r1.curr_temp
+
+                      - name: ON_LR 
+                        initial: Manuel_LR 
+                        transitions: 
+                          - target: OFF_LR 
+                            event: on_off_1
+                            action: |
+                              r1.ac_off()
+                          - target: Automatique_LR 
+                            event: plus_1
+                            action: |
+                              desTempLR += 1
+                              r1.ac_on(0)
+                          - target: Automatique_LR 
+                            event: minus_1
+                            action: |
+                              desTempLR -= 1
+                              r1.ac_on(0)
+                          - target: ON_LR
+                            event: tick 
+                            guard: r1.curr_temp > 40 
+                            action: |
+                              send('alarm_triggered')
+
+                        states: 
+                          - name: Manuel_LR 
+                            initial: Pause_M_LR
+
+
+                            states: 
+                              - name: LastUsedStateManual_LR
+                                type: shallow history 
+
+                              - name: Pause_M_LR
+                                transitions: 
+                                  - target: Cooling_M_LR
+                                    event: next_1
+                                    action: r1.ac_on(-1) 
+
+                              - name: Cooling_M_LR 
+                                transitions: 
+                                  - target: Heating_M_LR 
+                                    event: next_1
+                                    action: r1.ac_on(1)
+
+                              - name: Heating_M_LR
+                                transitions: 
+                                  - target: Pause_M_LR
+                                    event: next_1
+                                    action: r1.ac_on(0)
+
+                          - name: Automatique_LR
+                            initial: Pause_A_LR
+                            transitions:
+                              - target: LastUsedStateManual_LR
+                                event: next_1
+                              
+                              - event: plus_1
+                                action: |
+                                  desTempLR += 1
+                                  r1.ac_on(0)
+                              - event: minus_1
+                                action: |
+                                  desTempLR -= 1
+                                  r1.ac_on(0)
+
+                            states:
+                              - name: Pause_A_LR
+                                transitions:
+                                  - target: Cooling_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp > desTempLR + 1
+                                    action: r1.ac_on(-1)
+                                  - target: Heating_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp < desTempLR - 1
+                                    action: r1.ac_on(1)
+                                  - target: Pause_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp >= desTempLR - 1 and r1.curr_temp <= desTempLR + 1
+                                    action: r1.ac_on(0)
+
+                              - name: Cooling_A_LR
+                                transitions:
+                                  - target: Pause_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp >= desTempLR - 1 and r1.curr_temp <= desTempLR + 1
+                                    action: r1.ac_on(0)
+                                  - target: Heating_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp < desTempLR - 1
+                                    action: r1.ac_on(1)
+                                  - target: Cooling_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp > desTempLR + 1
+                                    action: r1.ac_on(-1)
+
+                              - name: Heating_A_LR
+                                transitions:
+                                  - target: Pause_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp >= desTempLR - 1 and r1.curr_temp <= desTempLR + 1
+                                    action: r1.ac_on(0)
+                                  - target: Cooling_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp > desTempLR + 1
+                                    action: r1.ac_on(-1)
+                                  - target: Heating_A_LR
+                                    event: tick
+                                    guard: r1.curr_temp < desTempLR - 1
+                                    action: r1.ac_on(1)
+
+
+
+                                    
+                        
+
+                  - name: BEDROOM
+                    initial: OFF_B
+                    states: 
+                      - name: OFF_B 
+                        transitions: 
+                          - target: ON_B 
+                            event: on_off_2
+                            action: |
+                              r2.ac_on(0)
+                              desTempB = r2.curr_temp
+
+                      - name: ON_B 
+                        initial: Manuel_B 
+                        transitions: 
+                          - target: ON_B
+                            event: tick 
+                            guard: r2.curr_temp > 40 
+                            action: |
+                              send('alarm_triggered')
+                          - target: OFF_B 
+                            event: on_off_2
+                            action: |
+                              r2.ac_off()
+                          - target: Automatique_B 
+                            event: plus_2
+                            action: |
+                              desTempB += 1
+                              r2.ac_on(0)
+                          - target: Automatique_B 
+                            event: minus_2
+                            action: |
+                              desTempB -= 1
+                              r2.ac_on(0)
+
+                        states: 
+                          - name: Manuel_B 
+                            initial: Pause_M_B
+
+
+                            states: 
+                              - name: LastUsedStateManual_B
+                                type: shallow history 
+
+                              - name: Pause_M_B
+                                transitions: 
+                                  - target: Cooling_M_B
+                                    event: next_2
+                                    action: r2.ac_on(-1) 
+
+                              - name: Cooling_M_B 
+                                transitions: 
+                                  - target: Heating_M_B 
+                                    event: next_2
+                                    action: r2.ac_on(1)
+
+                              - name: Heating_M_B
+                                transitions: 
+                                  - target: Pause_M_B
+                                    event: next_2
+                                    action: r2.ac_on(0)
+
+                          - name: Automatique_B
+                            initial: Pause_A_B
+                            transitions:
+                              - target: LastUsedStateManual_B
+                                event: next_2
+                              - event: plus_2
+                                action: |
+                                  desTempB += 1
+                                  r2.ac_on(0)
+                              - event: minus_2
+                                action: |
+                                  desTempB -= 1
+                                  r2.ac_on(0)
+
+                            states:
+                              - name: Pause_A_B
+                                transitions:
+                                  - target: Cooling_A_B
+                                    event: tick
+                                    guard: r2.curr_temp > desTempB + 1
+                                    action: r2.ac_on(-1)
+                                  - target: Heating_A_B
+                                    event: tick
+                                    guard: r2.curr_temp < desTempB - 1
+                                    action: r2.ac_on(1)
+                                  - target: Pause_A_B
+                                    event: tick
+                                    guard: r2.curr_temp >= desTempB - 1 and r2.curr_temp <= desTempB + 1
+                                    action: r2.ac_on(0)
+
+                              - name: Cooling_A_B
+                                transitions:
+                                  - target: Pause_A_B
+                                    event: tick
+                                    guard: r2.curr_temp >= desTempB - 1 and r2.curr_temp <= desTempB + 1
+                                    action: r2.ac_on(0)
+                                  - target: Heating_A_B
+                                    event: tick
+                                    guard: r2.curr_temp < desTempB - 1
+                                    action: r2.ac_on(1)
+                                  - target: Cooling_A_B
+                                    event: tick
+                                    guard: r2.curr_temp > desTempB + 1
+                                    action: r2.ac_on(-1)
+
+                              - name: Heating_A_B
+                                transitions:
+                                  - target: Pause_A_B
+                                    event: tick
+                                    guard: r2.curr_temp >= desTempB - 1 and r2.curr_temp <= desTempB + 1
+                                    action: r2.ac_on(0)
+                                  - target: Cooling_A_B
+                                    event: tick
+                                    guard: r2.curr_temp > desTempB + 1
+                                    action: r2.ac_on(-1)
+                                  - target: Heating_A_B
+                                    event: tick
+                                    guard: r2.curr_temp < desTempB - 1
+                                    action: r2.ac_on(1)

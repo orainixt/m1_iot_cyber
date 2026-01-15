@@ -1,0 +1,6 @@
+- name: config replication for db1 (db) 
+  hosts: client
+  become: true 
+  roles: 
+    - mysql_primaire_2
+

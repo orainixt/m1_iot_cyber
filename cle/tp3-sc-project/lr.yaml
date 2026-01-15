@@ -1,0 +1,154 @@
+statechart: 
+  name: LivingRoomACUnit
+  preamble: |
+    currTemp = 20
+  root state: 
+    name: LRAC
+    initial: OFF 
+
+
+    states: 
+      - name: OFF 
+        transitions: 
+          - target: ON 
+            event: on_off_1
+            action: |
+              r1.ac_on(0)
+              desTemp = currTemp 
+
+      - name: ON 
+        initial: Manuel 
+        transitions: 
+          - target: OFF 
+            event: on_off_1
+            action: |
+              r1.ac_off()
+          - target: Automatique 
+            event: plus_1
+            action: |
+              desTemp += 1
+              r1.ac_on(0)
+          - target: Automatique 
+            event: minus_1
+            action: |
+              desTemp -= 1
+              r1.ac_on(0)
+
+        states: 
+          - name: Manuel 
+            initial: Pause_M
+
+
+            states: 
+              - name: LastUsedStateManual
+                type: shallow history 
+
+              - name: Pause_M
+                transitions: 
+                  - target: Cooling_M
+                    event: next_1
+                    action: r1.ac_on(-1) 
+
+              - name: Cooling_M 
+                transitions: 
+                  - target: Heating_M 
+                    event: next_1
+                    action: r1.ac_on(1)
+
+              - name: Heating_M
+                transitions: 
+                  - target: Pause_M
+                    event: next_1
+                    action: r1.ac_on(0)
+
+          - name: Automatique
+            initial: Pause_A
+            transitions: 
+              - target: LastUsedStateManual
+                event: next_1
+              - event: plus_1
+                target: Automatique
+                action: |
+                  desTemp += 1
+                  r1.ac_on(0)
+              - event: minus_1
+                target: Automatique
+                action: |
+                  desTemp -= 1
+                  r1.ac_on(0)
+
+            
+            states: 
+              - name: Pause_A 
+                transitions: 
+                  - target: Cooling_A
+                    event: tick 
+                    guard: currTemp > desTemp + 1 
+                    action: |
+                      r1.ac_on(-1)
+
+                  - target: Heating_A 
+                    event: tick   
+                    guard: currTemp < desTemp-1  
+                    action: |
+                      r1.ac_on(1)
+
+                  - target: Pause_A
+                    event: tick
+                    guard: currTemp==desTemp
+                    action: |
+                      r1.ac_on(0)
+                    
+              - name: Cooling_A
+                transitions: 
+                  - target: Pause_A 
+                    guard: abs(currTemp - desTemp) < 0.1
+                    event: tick
+                    action: |
+                      r1.ac_on(0)
+
+                  - target: Heating_A 
+                    guard: currTemp < desTemp-1 
+                    event: tick
+                    action: |
+                      r1.ac_on(1)
+
+                  - target: Cooling_A 
+                    event: tick
+                    action: |
+                      currTemp -= 1
+                    guard: currTemp>desTemp
+
+              - name: Heating_A 
+                transitions: 
+                  - target: Pause_A
+                    event: tick
+                    guard: abs(currTemp - desTemp) < 0.1
+                    action: | 
+                      r1.ac_on(0)
+
+                  - target: Cooling_A 
+                    guard: currTemp > desTemp +1
+                    event: tick
+                    action: |
+                      r1.ac_on(-1)
+
+                  - target: Heating_A
+                    event: tick 
+                    action: |
+                      currTemp += 1
+                    guard: currTemp < desTemp
+
+
+          - name: Alarm 
+            initial: Alarm_On
+            states: 
+              - name: Alarm_On
+                transitions: 
+                  - target: Cooling_A
+                    guard: currTemp >= 15 
+                  - target: Heating_A
+                    guard: currTemp < 15 
+                
+
+

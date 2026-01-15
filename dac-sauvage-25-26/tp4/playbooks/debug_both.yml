@@ -1,0 +1,11 @@
+- name: Debug -- Should not be used -- 
+  hosts: instance1
+  become: true 
+  roles:
+    - replica_1
+
+- name: Debug -- Should not be used -- 
+  hosts: instance2
+  become: true 
+  roles:
+    - replica_2

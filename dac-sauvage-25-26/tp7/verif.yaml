@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: validation-rs
+  labels:
+    app: validation
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: nginx-val
+  template:
+    metadata:
+      labels:
+        app: nginx-val
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine

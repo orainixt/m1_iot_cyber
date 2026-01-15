@@ -1,0 +1,13 @@
+- name: Restart MySQL
+  ansible.builtin.service:
+    name: mysql
+    state: restarted
+
+- name: Flush Privileges 
+  community.mysql.mysql_query: 
+    login_db: "{{mysql_login_db}}"
+    login_user: "{{mysql_login_user}}"
+    login_unix_socket: "{{mysql_socket}}" 
+    query: >
+      FLUSH PRIVILEGES; 
+

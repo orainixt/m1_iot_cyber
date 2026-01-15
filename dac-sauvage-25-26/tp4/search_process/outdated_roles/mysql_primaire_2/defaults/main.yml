@@ -1,0 +1,5 @@
+mysql_server_2_ip: 172.28.101.8
+mysql_server_1_ip: 172.28.100.144
+mysql_login_db: repldB
+mysql_login_user: root 
+mysql_socket: /var/run/mysqld/mysqld.sock

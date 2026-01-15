@@ -1,0 +1,30 @@
+- name: Install Docker & K8s 
+  hosts: 
+    - control_panel 
+    - nodes 
+  become: true 
+  roles: 
+    - install_docker_k8s 
+
+
+- name: Setup system 
+  hosts: all
+  become: true 
+  roles: 
+    - config_system 
+
+
+- name: Configure Control-Panel 
+  hosts: control_panel 
+  become: true 
+  roles: 
+    - config_control_panel
+
+- name: Join nodes to cluster
+  hosts: nodes
+  become: yes
+  tasks:
+    - name: Join the cluster
+      shell: "{{ hostvars['K8S_TOKEN']['token'] }}"
+      args:
+        creates: /etc/kubernetes/kubelet.conf

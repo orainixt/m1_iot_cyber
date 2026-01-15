@@ -1,0 +1,7 @@
+- name: db_server_playbook
+  hosts: dbserver 
+  become: true 
+  roles: 
+    - mysql_server
+    
+    

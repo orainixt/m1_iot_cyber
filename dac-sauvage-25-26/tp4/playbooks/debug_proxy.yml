@@ -1,0 +1,61 @@
+- name: Test HAProxy Port and dB Host 
+  hosts: instanceP
+  become: true 
+  roles: 
+    - debug_proxy
+
+- name: Stop MySQL on BDD 2 
+  hosts: instance2 
+  become: true 
+  tasks:
+    - name: Stop Mysql 
+      ansible.builtin.service: 
+        name: mysql 
+        state: stopped 
+
+
+- name: Check if hostname has changed
+  hosts: instanceP
+  become: true 
+  roles: 
+    - debug_proxy 
+
+- name: Start MySQL on BDD 2 
+  hosts: instance2 
+  become: true 
+  tasks:
+    - name: Start MySQL
+      ansible.builtin.service: 
+        name: mysql 
+        state: started 
+
+- name: Change UFW rules
+  hosts: 
+    - instance1 
+    - instance2 
+  become: true 
+  roles: 
+    - ufw_configure 
+
+- name: Test Forbidden Request
+  hosts: localhost 
+  become: true
+  tasks :
+    - name: Test Forbidden reqest from tp4-bdd 
+      ansible.builtin.wait_for: 
+        host: "172.28.100.122"
+        port: 3306
+        state: started 
+        timeout: 3
+      register: firewall_check 
+      ignore_errors: yes 
+
+    - name: Firewall not workin 
+      ansible.builtin.fail:
+        msg: "ECHEC: Le port 3306 est ouvert."
+      when: not firewall_check.failed
+          
+    - name: Firewall working 
+      debug:
+        msg: "SUCCES: Le port 3306 est bien fermé."
+      when: firewall_check.failed

@@ -1,0 +1,19 @@
+  
+- name: Prepare Replica on Instance 1
+  hosts: instance1
+  become: true 
+  roles: 
+    - prepare_replica_1
+
+- name: Configure Replica from Instance 1 to Instance 2
+  hosts: instance2
+  become: true 
+  roles: 
+    - replica_2 
+
+- name: Configure Replica from Instance 2 to Instance 1 
+  hosts: instance1
+  become: true 
+  roles:
+    - replica_1
+ 

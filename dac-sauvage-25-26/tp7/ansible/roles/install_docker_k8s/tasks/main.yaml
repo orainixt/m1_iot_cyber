@@ -1,0 +1,48 @@
+
+- name: Install prerequisites 
+  apt:
+    name: ['apt-transport-https', 'ca-certificates', 'curl', 'gpg']
+    state: present
+    update_cache: yes
+
+- name: Add Docker GPG key 
+  get_url:
+    url: https://download.docker.com/linux/debian/gpg
+    dest: /etc/apt/trusted.gpg.d/docker.asc
+    mode: '0644'
+
+- name: Add Docker repo 
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/debian bookworm stable"
+    state: present
+
+- name: Add K8s GPG key 
+  get_url:
+    url: https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key
+    dest: /etc/apt/trusted.gpg.d/kubernetes.asc
+    mode: '0644'
+
+- name: Add K8s repo 
+  apt_repository:
+    repo: "deb https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /"
+    state: present
+
+- name: Installing packages 
+  apt:
+    name:
+      - containerd.io
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+    update_cache: yes
+
+- name: Block versions 
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - containerd.io
+    - kubelet
+    - kubeadm
+    - kubectl

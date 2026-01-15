@@ -1,0 +1,172 @@
+
+- name: Restart MySQL
+  ansible.builtin.service:
+    name: mysql
+    state: restarted
+
+- name: Copy dump to Replica (i1)
+  ansible.builtin.copy:
+    src: /tmp/all_databases.sql
+    dest: /tmp/all_databases.sql
+
+
+- name: Create a database repldB to receive replication
+  community.mysql.mysql_db:
+    name: repldB
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+
+- name: import database dump from i1 (dbserver)
+  community.mysql.mysql_db:
+    name: repldB
+    state: import
+    target: /tmp/all_databases.sql
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+- name: Stop Replica
+  community.mysql.mysql_replication:
+    mode: stopreplica
+    login_user: root
+    login_password: ""
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Get primary master status from remote host
+  community.mysql.mysql_query:
+    login_host: "{{ mysql_server_1_ip }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query: SHOW MASTER STATUS;
+  register: master_status_primary
+
+- name: Configure replication source (Change Master)
+  community.mysql.mysql_query:
+    query: >
+      CHANGE MASTER TO
+      MASTER_HOST="{{mysql_server_1_ip}}",
+      MASTER_USER='repl_user_2',
+      MASTER_PASSWORD='repl_2_pw',
+      MASTER_LOG_FILE='{{  master_status_primary.query_result[0][0]['File']  }}',
+      MASTER_LOG_POS={{ master_status_primary.query_result[0][0]['Position'] }};
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Start Replica
+  community.mysql.mysql_query:
+    query: "START REPLICA;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: check replication status
+  community.mysql.mysql_query:
+    query: "SHOW REPLICA STATUS;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  register: replica_status
+
+
+- name: Fetch [SQL Running & IO Running]
+  community.mysql.mysql_query:
+    login_user: "{{mysql_login_user}}"
+    login_password: ""
+    login_unix_socket: "{{mysql_socket}}" 
+    query: > 
+      SHOW REPLICA STATUS; 
+  register: replica_status
+
+- name: Set facts for replica status
+  set_fact:
+    replica_io_running: "{{ replica_status.query_result[0][0].Replica_IO_Running }}"
+    replica_sql_running: "{{ replica_status.query_result[0][0].Replica_SQL_Running }}"
+
+- name: Debug IO Running
+  debug:
+    var: replica_io_running
+
+- name: Debug SQL Running
+  debug:
+    var: replica_sql_running
+
+- name: Create replication user on i2 for i1 
+  community.mysql.mysql_user:
+    name: repl_user_1
+    password: "repl_1_pw"
+    plugin: mysql_native_password
+    host: "{{ mysql_server_1_ip }}"
+    priv: "*.*:REPLICATION SLAVE"
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  notify: 
+    - Flush Privileges
+    - Restart MySQL
+
+
+- name: Lock tables for replication snapshot
+  community.mysql.mysql_query:
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    query: >
+      FLUSH TABLES WITH READ LOCK;
+
+- name: Show Primary Status 
+  community.mysql.mysql_query:
+    login_db: "{{mysql_login_db}}"
+    login_user: "{{mysql_login_user}}"
+    login_password: ""
+    login_unix_socket: "{{mysql_socket}}" 
+    query: > 
+      SHOW MASTER STATUS; 
+
+- name: Unlock tables after replication snapshot
+  community.mysql.mysql_query:
+    query: "UNLOCK TABLES;"
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+
+# - name: Get primary binlog file name and binlog position from db1
+#   community.mysql.mysql_replication:
+#     mode: getprimary
+#     login_user: root 
+#     login_password: ""
+#     login_unix_socket: /var/run/mysqld/mysqld.sock
+#   register: primary_info
+#   delegate_to: db
+
+# - name: Stop Replica
+#   community.mysql.mysql_replication:
+#     mode: stopreplica
+#     login_user: root
+#     login_password: ""
+#     login_unix_socket: /var/run/mysqld/mysqld.sock
+
+
+
+# - name: Change primary to primary server and use binary log
+#   community.mysql.mysql_replication:
+#     mode: changeprimary
+#     primary_host: "{{mysql_server_1_ip}}"
+#     primary_log_file: "{{primary_info.File}}"
+#     primary_log_pos: "{{primary_info.Position}}"
+#     login_user: root 
+#     login_password: ""
+#     primary_user: repl_user_2
+#     primary_password: "repl_2_pw"
+#     login_unix_socket: /var/run/mysqld/mysqld.sock
+
+# - name: Start Replica
+#   community.mysql.mysql_replication:
+#     mode: startreplica
+#     login_user: root
+#     login_password: ""
+#     login_unix_socket: /var/run/mysqld/mysqld.sock
+    
+
+
+
+
+

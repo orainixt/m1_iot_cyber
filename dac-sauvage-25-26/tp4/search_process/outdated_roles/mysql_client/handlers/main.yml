@@ -1,0 +1,68 @@
+
+- name: Create MySQL user
+  community.mysql.mysql_user:
+    name: "{{ mysql_user }}"
+    password: "{{ mysql_user_password }}"
+    host: "{{ mysql_client_ip }}"
+    priv: "*.*:ALL"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create MySQL database
+  community.mysql.mysql_db:
+    name: "{{ mysql_database }}"
+    state: present
+    login_user: "{{ mysql_root_user }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  notify: Restart MySQL
+
+- name: Use database 
+  community.mysql.mysql_query:
+    login_db: testdB 
+    login_user: root 
+    query: > 
+      USE {{mysql_database}};
+    login_unix_socket: /var/run/mysqld/mysqld.sock   
+
+- name: Create MySQL table 
+  community.mysql.mysql_query: 
+    login_db: testdB 
+    login_user: root 
+    query: > 
+      CREATE TABLE IF NOT EXISTS testTable(name VARCHAR(50)); 
+    login_unix_socket: /var/run/mysqld/mysqld.sock 
+
+
+- name: Clean dB
+  community.mysql.mysql_query:
+    login_db: testdB
+    login_user: root 
+    query: >
+      TRUNCATE TABLE testTable;
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Insert into testTable 
+  community.mysql.mysql_query: 
+    login_db: testdB 
+    login_user: root 
+    query: > 
+      INSERT INTO testTable (name) VALUES ("Amin"); 
+    login_unix_socket: /var/run/mysqld/mysqld.sock 
+
+- name: Fetch dB (to test playbook)
+  community.mysql.mysql_query: 
+    login_db: testdB 
+    login_user: root 
+    query: > 
+      SELECT * from testTable; 
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  register: db_select 
+
+- name:
+  set_fact: 
+    db_select_query: "{{db_select.query_result[0]}}"
+
+- name: Print Select 
+  debug: 
+   

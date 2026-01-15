@@ -1,0 +1,27 @@
+- name: Init kubeadm 
+  shell: kubeadm init --pod-network-cidr=10.244.0.0/16
+  args:
+    creates: /etc/kubernetes/admin.conf
+  register: init_out
+
+- name: Setup config pour debian
+  shell: |
+    mkdir -p /home/debian/.kube
+    cp -f /etc/kubernetes/admin.conf /home/debian/.kube/config
+    chown debian:debian /home/debian/.kube/config
+    chmod 600 /home/debian/.kube/config
+
+- name: Install Flannel
+  become: yes
+  become_user: debian
+  shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  ignore_errors: yes 
+
+- name: Get join token
+  shell: kubeadm token create --print-join-command
+  register: join_cmd
+
+- name: Save token
+  add_host:
+    name: "K8S_TOKEN"
+    token: "{{ join_cmd.stdout }}"

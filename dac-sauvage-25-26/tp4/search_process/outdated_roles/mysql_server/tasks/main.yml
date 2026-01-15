@@ -1,0 +1,13 @@
+- name : Install Packages 
+  import_tasks : install.yml
+
+- name : Configure MySQL 
+  import_tasks : mysql.yml 
+  
+- name: Restart MySQL
+  ansible.builtin.service:
+    name: mysql
+    state: restarted
+
+- name : Configure Replication
+  import_tasks : replication.yml
